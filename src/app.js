@@ -1,24 +1,24 @@
 const express = require('express');
 const dotenv = require('dotenv');
-const userRoutes = require('./routes/user.routes');
-
+const authRoutes = require('./routes/user.routes'); // auth
+const commentRoutes = require('./routes/comment.routes');
+const postRoutes = require('./routes/post.routes');
+const cors = require('cors');
 dotenv.config();
 
 const app = express();
 
-// ======================================================
-// 🧩 MIDDLEWARES
-// ======================================================
-app.use(express.json()); // pour lire le JSON envoyé dans le body
+app.use(cors({
+    origin: 'http://127.0.0.1:5501',
+    credentials: true,
+}));
 
-// ======================================================
-// 🧭 ROUTES PRINCIPALES
-// ======================================================
-app.use('/api/users', userRoutes);
+app.use(express.json());
 
-// ======================================================
-// 🚧 GESTION DES ERREURS 404
-// ======================================================
+app.use('/api/auth', authRoutes);     // pour register/login
+app.use('/api/comments', commentRoutes);
+app.use('/api/posts', postRoutes);
+
 app.use((req, res) => {
   res.status(404).json({ message: 'Route non trouvée' });
 });
