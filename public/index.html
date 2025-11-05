@@ -1,54 +1,1162 @@
-<!DOCTYPE html>
-<html lang="fr">
+<!doctype html>
+<html lang="fr" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mini Réseau Social</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="/public/styles.css">
+
+  <!-- DaisyUI & Tailwind (CDN) -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.2/dist/full.min.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    * { font-family: 'Inter', sans-serif; }
+    
+    body { 
+      background: linear-gradient(to bottom right, #020617, #0f172a, #020617);
+      min-height: 100vh;
+      background-attachment: fixed;
+    }
+    
+    /* Animations */
+    @keyframes slideInRight {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOutRight {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(400px); opacity: 0; }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    
+    .animate-slide-in { animation: slideInRight 0.3s ease-out; }
+    .animate-slide-out { animation: slideOutRight 0.3s ease-out; }
+    .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+    
+    /* Toast Container */
+    #toast-container {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 380px;
+      max-width: calc(100vw - 2rem);
+    }
+    
+    /* Custom Toast Styles */
+    .custom-toast {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-radius: 1rem;
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .custom-toast:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    }
+    
+    .custom-toast.success {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+    
+    .custom-toast.error {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    
+    .custom-toast.warning {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05));
+      border-color: rgba(251, 191, 36, 0.3);
+    }
+    
+    .custom-toast.info {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+    
+    .toast-icon {
+      flex-shrink: 0;
+      width: 2.5rem;
+      height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 1.25rem;
+    }
+    
+    .success .toast-icon { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+    .error .toast-icon { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .warning .toast-icon { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+    .info .toast-icon { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+    
+    .toast-content { flex: 1; color: #fff; font-weight: 500; }
+    
+    .toast-close {
+      flex-shrink: 0;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.6;
+      transition: all 0.2s;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .toast-close:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.6);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+      z-index: 9998;
+    }
+    
+    .loading-overlay.active { display: grid; }
+    
+    .loading-spinner {
+      width: 3rem;
+      height: 3rem;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Modern Card Styles */
+    .modern-card {
+      background: rgba(30, 41, 59, 0.5);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .modern-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Post Image */
+    .post-img {
+      max-height: 500px;
+      width: 100%;
+      object-fit: cover;
+      border-radius: 1rem;
+      transition: transform 0.3s ease;
+    }
+    
+    .post-img:hover { transform: scale(1.02); }
+    
+    /* Input Styles */
+    .modern-input {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      transition: all 0.2s;
+    }
+    
+    .modern-input:focus {
+      background: rgba(30, 41, 59, 0.8);
+      border-color: rgba(59, 130, 246, 0.5);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* Button Hover Effects */
+    .btn { transition: all 0.2s ease; }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+    
+    /* Navbar Gradient */
+    .navbar-gradient {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(147, 51, 234, 0.9));
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+    
+    /* Comment Section */
+    .comment-item {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      transition: all 0.2s;
+    }
+    
+    .comment-item:hover {
+      background: rgba(30, 41, 59, 0.6);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+    ::-webkit-scrollbar-thumb { 
+      background: rgba(59, 130, 246, 0.5);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.7); }
+  </style>
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
-  <div class="container">
-    <a class="navbar-brand" href="#" onclick="checkAuthAndLoadFeed()">Mini Social App</a>
-    <div class="d-flex align-items-center">
-      <span id="welcome-message" class="text-white me-3 d-none"></span>
-      <button id="btn-login-nav" class="btn btn-outline-light me-2" onclick="renderLoginForm()">Connexion</button>
-      <button id="btn-signup-nav" class="btn btn-light" onclick="renderSignupForm()">Inscription</button>
-      <button id="btn-logout-nav" class="btn btn-danger d-none" onclick="logout()">Déconnexion</button>
+
+<!-- NAV -->
+<nav class="navbar navbar-gradient shadow-2xl p-4 sticky top-0 z-50">
+  <div class="container mx-auto flex justify-between items-center">
+    <a class="text-2xl font-bold cursor-pointer flex items-center gap-2" id="app-title">
+      <span class="text-3xl">🌐</span>
+      <span>Mini Social</span>
+    </a>
+    <div class="flex items-center gap-3">
+      <span id="welcome-message" class="text-lg font-semibold hidden sm:inline-block"></span>
+      <button id="btn-login-nav" class="btn btn-ghost btn-sm">Se connecter</button>
+      <button id="btn-signup-nav" class="btn btn-sm btn-accent">S'inscrire</button>
+      <button id="btn-logout-nav" class="btn btn-error btn-sm hidden">Déconnexion</button>
     </div>
   </div>
 </nav>
 
-<div class="container mt-4">
-  <div class="row justify-content-center">
-    <div class="col-lg-8" id="app-root">
-      <h2 class="text-center">Bienvenue sur le Mini Réseau Social !</h2>
-      <p class="text-center text-muted">Veuillez vous connecter ou vous inscrire pour voir le fil d'actualité.</p>
-    </div>
-  </div>
-</div>
-
-<!-- Modal création post -->
-<div class="modal fade" id="createPostModal" tabindex="-1" aria-labelledby="createPostModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="createPostModalLabel">Créer une Publication</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <textarea class="form-control" id="post-content" rows="3" placeholder="Quoi de neuf ?"></textarea>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-primary" onclick="handleCreatePost()">Publier</button>
+<!-- MAIN CONTAINER -->
+<div class="container mx-auto p-4 md:p-8">
+  <div class="flex justify-center">
+    <div class="w-full max-w-2xl" id="app-root">
+      <div class="text-center animate-fade-in">
+        <h2 class="text-4xl font-bold text-white mb-4">Bienvenue ! 👋</h2>
+        <p class="text-gray-400 text-lg">Connectez-vous pour découvrir le fil d'actualité</p>
       </div>
     </div>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="app.js"></script>
+<!-- CREATE POST MODAL -->
+<input type="checkbox" id="createPostModalToggle" class="modal-toggle" aria-label="Toggle create post modal" />
+<div class="modal backdrop-blur-sm">
+  <div class="modal-box modern-card max-w-2xl">
+    <h3 class="font-bold text-2xl text-white mb-4">✨ Créer une publication</h3>
+    <label for="createPostModalToggle" class="btn btn-sm btn-circle absolute right-4 top-4 btn-ghost" aria-label="Fermer le modal">✕</label>
+
+    <form id="create-post-form" class="space-y-4">
+      <div>
+        <label class="label"><span class="label-text text-gray-300">Titre</span></label>
+        <input type="text" id="post-title" placeholder="Ex: Ma belle journée" class="input modern-input w-full" />
+      </div>
+
+      <div>
+        <label class="label"><span class="label-text text-gray-300">Description</span></label>
+        <textarea id="post-description" class="textarea modern-input w-full h-20" placeholder="Quelques mots sur votre publication..."></textarea>
+      </div>
+
+      <div>
+        <label class="label"><span class="label-text text-gray-300">Image</span></label>
+        <input type="file" id="post-image" accept="image/*" title="Image de la publication" placeholder="Sélectionnez une image" class="file-input file-input-bordered file-input-primary w-full" />
+      </div>
+
+      <div>
+        <label class="label"><span class="label-text text-gray-300">Contenu *</span></label>
+        <textarea id="post-content" class="textarea modern-input w-full h-24" placeholder="Quoi de neuf ?" required></textarea>
+      </div>
+    </form>
+
+    <div class="modal-action">
+      <label for="createPostModalToggle" class="btn btn-ghost">Annuler</label>
+      <button id="create-post-submit" type="button" class="btn btn-primary">🚀 Publier</button>
+    </div>
+  </div>
+  <label class="modal-backdrop" for="createPostModalToggle"></label>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+  <div class="loading-spinner"></div>
+</div>
+
+<script>
+/* ===========================
+   CONFIGURATION & UTILITAIRES
+   =========================== */
+const CONFIG = {
+  BASE_API_URL: 'http://localhost:5000/api',
+  BASE_URL: 'http://localhost:5000',
+  TOAST_DURATION: 4000
+};
+
+const qs = sel => document.querySelector(sel);
+const qsa = sel => Array.from(document.querySelectorAll(sel));
+
+// Loading Overlay
+const loadingOverlay = (() => {
+  const el = qs('#loading-overlay');
+  let counter = 0;
+  return {
+    show: () => { counter++; el.classList.add('active'); },
+    hide: () => { counter = Math.max(0, counter - 1); if (counter === 0) el.classList.remove('active'); }
+  };
+})();
+
+/* === Toast Notifications === */
+const Toast = (() => {
+  const container = qs('#toast-container');
+  const icons = {
+    success: '✓',
+    error: '✕',
+    warning: '⚠',
+    info: 'ℹ'
+  };
+
+  return {
+    show: (message, type = 'info', duration = CONFIG.TOAST_DURATION) => {
+      const toast = document.createElement('div');
+      toast.className = `custom-toast ${type} animate-slide-in`;
+
+      const icon = document.createElement('div');
+      icon.className = 'toast-icon';
+      icon.textContent = icons[type] || icons.info;
+
+      const content = document.createElement('div');
+      content.className = 'toast-content';
+      content.textContent = message;
+
+      const close = document.createElement('div');
+      close.className = 'toast-close';
+      close.innerHTML = '✕';
+      close.onclick = () => removeToast(toast);
+
+      toast.append(icon, content, close);
+      toast.onclick = () => removeToast(toast);
+      container.appendChild(toast);
+
+      const timer = setTimeout(() => removeToast(toast), duration);
+      toast._timer = timer;
+    }
+  };
+
+  function removeToast(toast) {
+    if (toast._timer) clearTimeout(toast._timer);
+    toast.classList.remove('animate-slide-in');
+    toast.classList.add('animate-slide-out');
+    setTimeout(() => toast.remove(), 300);
+  }
+})();
+
+/* === Storage & Auth === */
+const Auth = (() => {
+  const storage = {
+    get: (key) => localStorage.getItem(key),
+    set: (key, value) => localStorage.setItem(key, value),
+    clear: () => localStorage.clear()
+  };
+
+  return {
+    getToken: () => storage.get('authToken'),
+    getUserId: () => storage.get('currentUserId'),
+    getUsername: () => storage.get('username') || 'Utilisateur',
+    
+    save: ({ token, user }) => {
+      storage.set('authToken', token);
+      storage.set('username', user.username || user.name || 'Utilisateur');
+      storage.set('currentUserId', user._id || user.id || '');
+    },
+    
+    clear: () => storage.clear(),
+    
+    isTokenExpired: (token) => {
+      if (!token) return true;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.exp ? Date.now() > payload.exp * 1000 : false;
+      } catch {
+        return false;
+      }
+    }
+  };
+})();
+
+/* === API Layer === */
+const API = (() => {
+  const request = async (endpoint, options = {}) => {
+    const token = Auth.getToken();
+    
+    if (token && Auth.isTokenExpired(token)) {
+      Auth.clear();
+      Toast.show('Session expirée. Veuillez vous reconnecter.', 'warning');
+      UI.renderLogin();
+      return null;
+    }
+
+    const url = `${CONFIG.BASE_API_URL}/${endpoint.replace(/^\/+/, '')}`;
+    const headers = { ...options.headers };
+
+    if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+    }
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      loadingOverlay.show();
+      const res = await fetch(url, { ...options, headers });
+      loadingOverlay.hide();
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: `Erreur ${res.status}` }));
+        
+        if (res.status === 401) {
+          Auth.clear();
+          Toast.show('Non autorisé. Veuillez vous reconnecter.', 'error');
+          UI.renderLogin();
+          return null;
+        }
+
+        Toast.show(err.message || `Erreur serveur ${res.status}`, 'error');
+        throw new Error(err.message);
+      }
+
+      if (res.status === 204) return null;
+      
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    } catch (e) {
+      loadingOverlay.hide();
+      console.error('API Error:', e);
+      if (!e.message.includes('401')) {
+        Toast.show('Erreur réseau: ' + e.message, 'error');
+      }
+      return null;
+    }
+  };
+
+  return {
+    auth: {
+      register: (data) => request('auth/register', { method: 'POST', body: JSON.stringify(data) }),
+      login: (data) => request('auth/login', { method: 'POST', body: JSON.stringify(data) })
+    },
+    
+    posts: {
+      getAll: () => request('posts'),
+      getOne: (id) => request(`posts/${id}`),
+      create: (formData) => {
+        const token = Auth.getToken();
+        return fetch(`${CONFIG.BASE_API_URL}/posts`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        }).then(r => r.json());
+      },
+      update: (id, data) => request(`posts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      delete: (id) => request(`posts/${id}`, { method: 'DELETE' }),
+      like: (id) => request(`posts/${id}/like`, { method: 'POST' })
+    },
+    
+    comments: {
+      create: (data) => request('comments', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id, data) => request(`comments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      delete: (id) => request(`comments/${id}`, { method: 'DELETE' })
+    }
+  };
+})();
+
+/* ===========================
+   UI COMPONENTS
+   =========================== */
+const UI = (() => {
+  const root = qs('#app-root');
+  
+  const updateNav = () => {
+    const isAuth = !!Auth.getToken();
+    qs('#btn-login-nav').classList.toggle('hidden', isAuth);
+    qs('#btn-signup-nav').classList.toggle('hidden', isAuth);
+    qs('#btn-logout-nav').classList.toggle('hidden', !isAuth);
+    
+    const welcome = qs('#welcome-message');
+    if (isAuth) {
+      welcome.classList.remove('hidden');
+      welcome.textContent = `Bonjour, ${Auth.getUsername()} ! 👋`;
+    } else {
+      welcome.classList.add('hidden');
+    }
+  };
+
+  const renderLogin = () => {
+    updateNav();
+    root.innerHTML = '';
+    
+    const card = document.createElement('div');
+    card.className = 'modern-card p-8 animate-fade-in';
+    card.innerHTML = `
+      <h3 class="text-3xl font-bold text-center mb-8 text-white">🔐 Connexion</h3>
+      <form id="login-form" class="space-y-5">
+        <div>
+          <label class="label"><span class="label-text text-gray-300">Email</span></label>
+          <input type="email" id="login-email" class="input modern-input w-full" required>
+        </div>
+        <div>
+          <label class="label"><span class="label-text text-gray-300">Mot de passe</span></label>
+          <input type="password" id="login-password" class="input modern-input w-full" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-full mt-8">Se connecter</button>
+        <p class="text-center text-sm text-gray-400 mt-6">
+          Pas de compte ?
+          <a href="#" id="link-to-signup" class="link link-primary font-semibold">Inscrivez-vous</a>
+        </p>
+      </form>
+    `;
+    root.appendChild(card);
+
+    qs('#login-form').onsubmit = Actions.login;
+    qs('#link-to-signup').onclick = (e) => { e.preventDefault(); renderSignup(); };
+  };
+
+  const renderSignup = () => {
+    updateNav();
+    root.innerHTML = '';
+    
+    const card = document.createElement('div');
+    card.className = 'modern-card p-8 animate-fade-in';
+    card.innerHTML = `
+      <h3 class="text-3xl font-bold text-center mb-8 text-white">✨ Inscription</h3>
+      <form id="signup-form" class="space-y-5">
+        <div>
+          <label class="label"><span class="label-text text-gray-300">Nom d'utilisateur</span></label>
+          <input type="text" id="signup-username" class="input modern-input w-full" required>
+        </div>
+        <div>
+          <label class="label"><span class="label-text text-gray-300">Email</span></label>
+          <input type="email" id="signup-email" class="input modern-input w-full" required>
+        </div>
+        <div>
+          <label class="label"><span class="label-text text-gray-300">Mot de passe</span></label>
+          <input type="password" id="signup-password" class="input modern-input w-full" required>
+        </div>
+        <div>
+          <label class="label"><span class="label-text text-gray-300">Confirmer mot de passe</span></label>
+          <input type="password" id="signup-password-confirm" class="input modern-input w-full" required>
+        </div>
+        <button type="submit" class="btn btn-success w-full mt-8">S'inscrire</button>
+        <p class="text-center text-sm text-gray-400 mt-6">
+          Déjà un compte ?
+          <a href="#" id="link-to-login" class="link link-primary font-semibold">Connectez-vous</a>
+        </p>
+      </form>
+    `;
+    root.appendChild(card);
+
+    qs('#signup-form').onsubmit = Actions.signup;
+    qs('#link-to-login').onclick = (e) => { e.preventDefault(); renderLogin(); };
+  };
+
+  const renderFeed = async (posts = []) => {
+    updateNav();
+    root.innerHTML = '';
+
+    const createBtn = document.createElement('label');
+    createBtn.setAttribute('for', 'createPostModalToggle');
+    createBtn.className = 'btn btn-primary btn-lg w-full mb-8 text-lg animate-fade-in';
+    createBtn.innerHTML = '✨ Créer une publication';
+    root.appendChild(createBtn);
+
+    if (!posts.length) {
+      const empty = document.createElement('div');
+      empty.className = 'text-center text-gray-400 text-lg py-12 animate-fade-in';
+      empty.textContent = '📭 Aucune publication pour le moment';
+      root.appendChild(empty);
+      return;
+    }
+
+    const currentUserId = Auth.getUserId();
+
+    posts.forEach((post, idx) => {
+      const card = document.createElement('div');
+      card.className = 'modern-card p-6 mb-6 animate-fade-in';
+      card.style.animationDelay = `${idx * 0.05}s`;
+
+      const title = document.createElement('h4');
+      title.className = 'text-2xl font-bold text-white mb-2';
+      title.textContent = post.title || '(Sans titre)';
+      card.appendChild(title);
+
+      if (post.description) {
+        const desc = document.createElement('p');
+        desc.className = 'text-gray-400 mb-4';
+        desc.textContent = post.description;
+        card.appendChild(desc);
+      }
+
+      if (post.imageUrl) {
+        const img = document.createElement('img');
+        img.className = 'post-img mb-4';
+        img.src = post.imageUrl.startsWith('http') ? post.imageUrl : CONFIG.BASE_URL + post.imageUrl;
+        img.alt = 'Post image';
+        card.appendChild(img);
+      }
+
+      const content = document.createElement('p');
+      content.className = 'text-gray-200 mb-6 text-lg';
+      content.id = `post-content-${post._id}`;
+      content.textContent = post.content;
+      card.appendChild(content);
+
+      const isOwner = post.user && (post.user._id === currentUserId || post.user.id === currentUserId);
+      
+      if (isOwner) {
+        const actions = document.createElement('div');
+        actions.className = 'flex gap-2 mb-4';
+        
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn btn-sm btn-warning';
+        editBtn.textContent = '✏️ Modifier';
+        editBtn.onclick = () => Actions.editPost(post._id);
+        
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-sm btn-error';
+        delBtn.textContent = '🗑️ Supprimer';
+        delBtn.onclick = () => Actions.deletePost(post._id);
+        
+        actions.append(editBtn, delBtn);
+        card.appendChild(actions);
+      }
+
+      const socials = document.createElement('div');
+      socials.className = 'flex gap-3 border-t border-gray-700 pt-4';
+      
+      const liked = post.likes?.includes(currentUserId);
+      const likeBtn = document.createElement('button');
+      likeBtn.className = `btn btn-sm ${liked ? 'btn-primary' : 'btn-ghost'}`;
+      likeBtn.textContent = `${liked ? '❤️' : '🤍'} ${post.likes?.length || 0}`;
+      likeBtn.onclick = async () => {
+        await Actions.toggleLike(post._id);
+        await Actions.loadFeed();
+      };
+      
+      const commentBtn = document.createElement('button');
+      commentBtn.className = 'btn btn-sm btn-ghost';
+      commentBtn.textContent = `💬 ${post.commentsCount || 0}`;
+      commentBtn.onclick = () => toggleComments(post._id);
+      
+      socials.append(likeBtn, commentBtn);
+      card.appendChild(socials);
+
+      const commentSection = document.createElement('div');
+      commentSection.id = `comment-section-${post._id}`;
+      commentSection.className = 'hidden mt-6 pt-6 border-t border-gray-700';
+      
+      const inputRow = document.createElement('div');
+      inputRow.className = 'flex gap-2 mb-4';
+      
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = `comment-input-${post._id}`;
+      input.className = 'input modern-input flex-1';
+      input.placeholder = 'Écrire un commentaire...';
+      
+      const sendBtn = document.createElement('button');
+      sendBtn.className = 'btn btn-primary';
+      sendBtn.textContent = '➤';
+      sendBtn.onclick = () => Actions.addComment(post._id);
+      
+      inputRow.append(input, sendBtn);
+      commentSection.appendChild(inputRow);
+      
+      const commentsList = document.createElement('div');
+      commentsList.id = `comments-list-${post._id}`;
+      commentsList.className = 'space-y-2';
+      commentSection.appendChild(commentsList);
+      
+      card.appendChild(commentSection);
+      root.appendChild(card);
+
+      if (post.comments?.length) renderComments(post._id, post.comments);
+    });
+  };
+
+  const renderComments = (postId, comments) => {
+    const container = qs(`#comments-list-${postId}`);
+    if (!container) return;
+    container.innerHTML = '';
+
+    const currentUserId = Auth.getUserId();
+
+    comments.forEach(c => {
+      if (!c?.author) return;
+      
+      const item = document.createElement('div');
+      item.className = 'comment-item flex justify-between items-start';
+      
+      const left = document.createElement('div');
+      left.className = 'flex-1';
+      
+      const author = document.createElement('span');
+      author.className = 'font-bold text-blue-400';
+      author.textContent = c.author.username || c.author.name || 'Utilisateur';
+      
+      const content = document.createElement('span');
+      content.id = `comment-content-${c._id}`;
+      content.className = 'text-gray-300 ml-2';
+      content.textContent = c.content;
+      
+      left.append(author, content);
+      item.appendChild(left);
+      
+      const isOwner = c.author._id === currentUserId || c.author.id === currentUserId;
+      
+      if (isOwner) {
+        const actions = document.createElement('div');
+        actions.className = 'flex gap-1 ml-2';
+        
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn btn-xs btn-ghost';
+        editBtn.textContent = '✏️';
+        editBtn.onclick = () => Actions.editComment(c._id, postId);
+        
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-xs btn-ghost text-error';
+        delBtn.textContent = '🗑️';
+        delBtn.onclick = () => Actions.deleteComment(c._id, postId);
+        
+        actions.append(editBtn, delBtn);
+        item.appendChild(actions);
+      }
+      
+      container.appendChild(item);
+    });
+  };
+
+  const toggleComments = (postId) => {
+    const section = qs(`#comment-section-${postId}`);
+    if (section) section.classList.toggle('hidden');
+  };
+
+  return {
+    renderLogin,
+    renderSignup,
+    renderFeed,
+    renderComments,
+    updateNav
+  };
+})();
+
+/* ===========================
+   ACTIONS & HANDLERS
+   =========================== */
+const Actions = (() => {
+  const signup = async (e) => {
+    e?.preventDefault();
+    
+    const username = qs('#signup-username')?.value.trim();
+    const email = qs('#signup-email')?.value.trim();
+    const password = qs('#signup-password')?.value;
+    const confirmPassword = qs('#signup-password-confirm')?.value;
+
+    if (!username || !email || !password) {
+      Toast.show('Veuillez remplir tous les champs', 'warning');
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      Toast.show('Les mots de passe ne correspondent pas', 'warning');
+      return;
+    }
+
+    const data = await API.auth.register({ username, email, password, confirmPassword });
+    
+    if (data) {
+      Toast.show('✨ Inscription réussie ! Connectez-vous maintenant', 'success');
+      UI.renderLogin();
+    }
+  };
+
+  const login = async (e) => {
+    e?.preventDefault();
+    
+    const email = qs('#login-email')?.value.trim();
+    const password = qs('#login-password')?.value;
+
+    if (!email || !password) {
+      Toast.show('Veuillez saisir email et mot de passe', 'warning');
+      return;
+    }
+
+    const data = await API.auth.login({ email, password });
+    
+    if (data?.token) {
+      Auth.save({ token: data.token, user: data.user });
+      Toast.show('🎉 Connexion réussie !', 'success');
+      await loadFeed();
+    }
+  };
+
+  const logout = (notify = true) => {
+    Auth.clear();
+    UI.updateNav();
+    if (notify) Toast.show('👋 À bientôt !', 'info');
+    UI.renderLogin();
+  };
+
+  const loadFeed = async () => {
+    if (!Auth.getToken()) {
+      UI.renderLogin();
+      return;
+    }
+
+    const posts = await API.posts.getAll();
+    if (!posts) {
+      if (!Auth.getToken()) UI.renderLogin();
+      return;
+    }
+
+    // Enrichir chaque post avec ses commentaires
+    for (const post of posts) {
+      try {
+        const detail = await API.posts.getOne(post._id);
+        if (detail) {
+          post.comments = detail.comments || [];
+          post.commentsCount = detail.commentsCount || post.comments.length;
+        } else {
+          post.comments = post.comments || [];
+          post.commentsCount = post.commentsCount || 0;
+        }
+      } catch (err) {
+        console.error('Erreur chargement détails post', err);
+        post.comments = post.comments || [];
+        post.commentsCount = post.commentsCount || 0;
+      }
+    }
+
+    UI.renderFeed(posts);
+  };
+
+  const createPost = async () => {
+    const title = qs('#post-title')?.value.trim();
+    const description = qs('#post-description')?.value.trim();
+    const content = qs('#post-content')?.value.trim();
+    const imageFile = qs('#post-image')?.files?.[0];
+
+    if (!content && !imageFile) {
+      Toast.show('Veuillez ajouter du contenu ou une image', 'warning');
+      return;
+    }
+
+    const formData = new FormData();
+    if (title) formData.append('title', title);
+    if (description) formData.append('description', description);
+    if (content) formData.append('content', content);
+    if (imageFile) formData.append('image', imageFile);
+
+    try {
+      loadingOverlay.show();
+      const created = await API.posts.create(formData);
+      loadingOverlay.hide();
+      
+      if (created) {
+        Toast.show('🎉 Publication créée avec succès !', 'success');
+        
+        // Fermer le modal
+        const toggle = qs('#createPostModalToggle');
+        if (toggle) toggle.checked = false;
+        
+        // Reset form
+        qs('#create-post-form')?.reset();
+        
+        await loadFeed();
+      }
+    } catch (e) {
+      loadingOverlay.hide();
+      console.error('Erreur création post', e);
+      Toast.show('Erreur lors de la création', 'error');
+    }
+  };
+
+  const deletePost = async (postId) => {
+  // === Créer la modale principale ===
+  const modal = document.createElement('div');
+  modal.className = `
+    fixed inset-0 z-[9999] flex items-center justify-center 
+    bg-black/60 backdrop-blur-sm opacity-0 transition-opacity duration-300
+  `;
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.innerHTML = `
+    <div class="modern-card p-8 max-w-md mx-4 text-center">
+      <h3 class="text-2xl font-bold text-white mb-4">🗑️ Supprimer le post ?</h3>
+      <p class="text-gray-400 mb-6">Cette action est irréversible</p>
+      <div class="flex gap-3 justify-center">
+        <button class="btn btn-ghost" id="cancel-delete">Annuler</button>
+        <button class="btn btn-error" id="confirm-delete">Supprimer</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // === Animation d'apparition ===
+  setTimeout(() => modal.classList.remove('opacity-0'), 10);
+
+  // === Fonction pour fermer avec animation ===
+  const remove = () => {
+    modal.classList.add('opacity-0');
+    setTimeout(() => modal.remove(), 300);
+  };
+
+  // === Fermeture via clic extérieur ou touche Échap ===
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) remove();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') remove();
+  }, { once: true });
+
+  // === Gestion des boutons ===
+  const cancelBtn = modal.querySelector('#cancel-delete');
+  const confirmBtn = modal.querySelector('#confirm-delete');
+
+  cancelBtn.onclick = remove;
+
+  confirmBtn.onclick = async () => {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class="loading loading-spinner"></span> Suppression...';
+
+    try {
+      const result = await API.posts.delete(postId);
+      remove();
+
+      if (result === null) {
+        Toast.show('✓ Post supprimé', 'success');
+        await loadFeed();
+      } else {
+        Toast.show('❌ Échec de la suppression', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      Toast.show('⚠️ Erreur lors de la suppression', 'error');
+      remove();
+    }
+  };
+};
+
+
+  const editPost = async (postId) => {
+    const contentEl = qs(`#post-content-${postId}`);
+    if (!contentEl) return;
+    
+    const oldContent = contentEl.textContent;
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm';
+    modal.innerHTML = `
+      <div class="modern-card p-8 max-w-2xl mx-4 w-full">
+        <h3 class="text-2xl font-bold text-white mb-4">✏️ Modifier le post</h3>
+        <textarea id="edit-content" class="textarea modern-input w-full h-32 mb-4">${oldContent}</textarea>
+        <div class="flex gap-3 justify-end">
+          <button class="btn btn-ghost" id="cancel-edit">Annuler</button>
+          <button class="btn btn-primary" id="confirm-edit">Enregistrer</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const remove = () => modal.remove();
+    
+    modal.querySelector('#cancel-edit').onclick = remove;
+    modal.querySelector('#confirm-edit').onclick = async () => {
+      const newContent = modal.querySelector('#edit-content').value.trim();
+      if (!newContent) {
+        Toast.show('Le contenu ne peut pas être vide', 'warning');
+        return;
+      }
+      if (newContent === oldContent) {
+        remove();
+        return;
+      }
+      
+      remove();
+      const result = await API.posts.update(postId, { content: newContent });
+      if (result) {
+        Toast.show('✓ Post modifié', 'success');
+        await loadFeed();
+      }
+    };
+  };
+
+  const toggleLike = async (postId) => {
+    return await API.posts.like(postId);
+  };
+
+  const addComment = async (postId) => {
+    const input = qs(`#comment-input-${postId}`);
+    if (!input) return;
+    
+    const content = input.value.trim();
+    if (!content) {
+      Toast.show('Le commentaire ne peut pas être vide', 'warning');
+      return;
+    }
+
+    const data = await API.comments.create({
+      content,
+      author: Auth.getUserId(),
+      post: postId
+    });
+
+    if (data) {
+      input.value = '';
+      Toast.show('💬 Commentaire ajouté', 'success', 2000);
+      await loadFeed();
+    }
+  };
+
+  const deleteComment = async (commentId, postId) => {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm';
+    modal.innerHTML = `
+      <div class="modern-card p-8 max-w-md mx-4 text-center">
+        <h3 class="text-2xl font-bold text-white mb-4">🗑️ Supprimer le commentaire ?</h3>
+        <div class="flex gap-3 justify-center mt-6">
+          <button class="btn btn-ghost" id="cancel-delete">Annuler</button>
+          <button class="btn btn-error" id="confirm-delete">Supprimer</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const remove = () => modal.remove();
+    
+    modal.querySelector('#cancel-delete').onclick = remove;
+    modal.querySelector('#confirm-delete').onclick = async () => {
+      remove();
+      const result = await API.comments.delete(commentId);
+      if (result === null) {
+        Toast.show('✓ Commentaire supprimé', 'success', 2000);
+        await loadFeed();
+      }
+    };
+  };
+
+  const editComment = async (commentId, postId) => {
+    const contentEl = qs(`#comment-content-${commentId}`);
+    if (!contentEl) return;
+    
+    const oldContent = contentEl.textContent;
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm';
+    modal.innerHTML = `
+      <div class="modern-card p-8 max-w-xl mx-4 w-full">
+        <h3 class="text-2xl font-bold text-white mb-4">✏️ Modifier le commentaire</h3>
+        <input type="text" id="edit-comment-content" class="input modern-input w-full mb-4" value="${oldContent}">
+        <div class="flex gap-3 justify-end">
+          <button class="btn btn-ghost" id="cancel-edit">Annuler</button>
+          <button class="btn btn-primary" id="confirm-edit">Enregistrer</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const remove = () => modal.remove();
+    
+    modal.querySelector('#cancel-edit').onclick = remove;
+    modal.querySelector('#confirm-edit').onclick = async () => {
+      const newContent = modal.querySelector('#edit-comment-content').value.trim();
+      if (!newContent) {
+        Toast.show('Le commentaire ne peut pas être vide', 'warning');
+        return;
+      }
+      if (newContent === oldContent) {
+        remove();
+        return;
+      }
+      
+      remove();
+      const result = await API.comments.update(commentId, { content: newContent });
+      if (result) {
+        Toast.show('✓ Commentaire modifié', 'success', 2000);
+        await loadFeed();
+      }
+    };
+  };
+
+  return {
+    signup,
+    login,
+    logout,
+    loadFeed,
+    createPost,
+    deletePost,
+    editPost,
+    toggleLike,
+    addComment,
+    deleteComment,
+    editComment
+  };
+})();
+
+/* ===========================
+   INITIALISATION
+   =========================== */
+const App = (() => {
+  const init = () => {
+    // Nav listeners
+    qs('#btn-login-nav').onclick = UI.renderLogin;
+    qs('#btn-signup-nav').onclick = UI.renderSignup;
+    qs('#btn-logout-nav').onclick = () => Actions.logout(true);
+    qs('#app-title').onclick = () => {
+      if (Auth.getToken()) Actions.loadFeed();
+      else UI.renderLogin();
+    };
+
+    // Create post button
+    qs('#create-post-submit').onclick = Actions.createPost;
+
+    // Check auth and load
+    UI.updateNav();
+    if (Auth.getToken()) {
+      Actions.loadFeed();
+    } else {
+      UI.renderLogin();
+    }
+  };
+
+  return { init };
+})();
+
+// Start application
+App.init();
+</script>
 </body>
 </html>

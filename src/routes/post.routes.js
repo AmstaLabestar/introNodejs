@@ -1,4 +1,3 @@
-// routes/post.routes.js
 const express = require('express');
 const router = express.Router();
 const {
@@ -11,17 +10,17 @@ const {
   updatePost
 } = require('../controllers/post.controller');
 const { verifyToken } = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware');
 
-// 🔹 Routes publiques
+// Routes publiques
 router.get('/', getPosts);
-router.get('/:id', getPostById);
 router.get('/user/:userId', getUserPosts);
+router.get('/:id', getPostById);
 
-// 🔹 Routes privées (auth requise)
-router.post('/', verifyToken, createPost);
+// Routes privées (authentification requise)
+router.post('/', verifyToken, upload.single('image'), createPost);
+router.put('/:id', verifyToken, upload.single('image'), updatePost);
 router.delete('/:id', verifyToken, deletePost);
 router.post('/:id/like', verifyToken, toggleLike);
-router.put('/:id', verifyToken, updatePost);
-
 
 module.exports = router;

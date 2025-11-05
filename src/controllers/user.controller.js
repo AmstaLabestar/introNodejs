@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
-// 🔹 Enregistrement d’un utilisateur
+//  Enregistrement d’un utilisateur
 exports.registerUser = async (req, res) => {
   try {
     const { username, email, password, confirmPassword } = req.body;
@@ -53,7 +53,7 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// 🔹 Connexion d’un utilisateur
+//  Connexion d’un utilisateur
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -94,10 +94,10 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// 🔹 Récupération de tous les utilisateurs (protégée)
+// Récupération de tous les utilisateurs (protégée)
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.find().select('-password');// on recupères les donnée de tous les users sans le password
     res.status(200).json(users);
   } catch (error) {
     console.error("Erreur lors de la récupération des utilisateurs :", error);
@@ -105,7 +105,7 @@ exports.getUsers = async (req, res) => {
   }
 };
 
-// 🔹 Récupération d’un utilisateur par ID (protégée)
+// Récupération d’un utilisateur par ID (protégée)
 exports.getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
@@ -140,7 +140,7 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// 🔹 Suppression d’un utilisateur (protégée)
+// Suppression d’un utilisateur (protégée)
 exports.deleteUser = async (req, res) => {
   try {
     const deletedUser = await User.findByIdAndDelete(req.params.id).select('-password');

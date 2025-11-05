@@ -1,6 +1,6 @@
 const Comment = require('../models/comment.model');
 
-// ✅ Ajouter un commentaire
+// Ajouter un commentaire
 exports.createComment = async (req, res) => {
   try {
     const { content, author, post } = req.body; // author au lieu de user
@@ -18,19 +18,19 @@ exports.createComment = async (req, res) => {
 };
 
 
-// ✅ Récupérer tous les commentaires
+// Récupérer tous les commentaires
 exports.getComments = async (req, res) => {
   try {
     const comments = await Comment.find()
       .populate('user', 'name email') // affiche seulement le nom et l'email de l'utilisateur
-      .populate('post', 'title'); // adapte selon ton modèle de post
+      .populate('post', 'title'); // selon ton modèle de post
     res.status(200).json(comments);
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la récupération des commentaires', error: error.message });
   }
 };
 
-// ✅ Récupérer un commentaire par ID
+// Récupérer un commentaire par ID
 exports.getCommentById = async (req, res) => {
   try {
     const comment = await Comment.findById(req.params.id)
@@ -45,23 +45,38 @@ exports.getCommentById = async (req, res) => {
   }
 };
 
-// ✅ Supprimer un commentaire
+// Supprimer un commentaire
+
 exports.deleteComment = async (req, res) => {
   try {
-    const comment = await Comment.findById(req.params.id);
-    if (!comment) return res.status(404).json({ message: 'Commentaire non trouvé' });
+    const { id } = req.params;
 
-    if (comment.author.toString() !== req.user.id)
-      return res.status(403).json({ message: 'Accès refusé' });
+    // Vérifie le format de l'ID
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: "ID invalide" });
+    }
 
-    await comment.remove();
-    res.status(200).json({ message: 'Commentaire supprimé' });
+    const comment = await Comment.findById(id);
+
+    if (!comment) {
+      return res.status(404).json({ message: "Commentaire introuvable" });
+    }
+
+    // Vérifie que l'utilisateur est bien l'auteur
+    if (comment.author.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Non autorisé à supprimer ce commentaire" });
+    }
+
+    await comment.deleteOne();
+
+    return res.status(204).send();
   } catch (error) {
-    res.status(500).json({ message: 'Erreur serveur', error: error.message });
+    console.error("Erreur suppression commentaire :", error);
+    return res.status(500).json({ message: "Erreur serveur" });
   }
 };
 
-// 🔹 Mettre à jour un commentaire
+// Mettre à jour un commentaire
 exports.updateComment = async (req, res) => {
   try {
     const comment = await Comment.findById(req.params.id);

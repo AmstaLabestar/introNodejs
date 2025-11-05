@@ -4,8 +4,19 @@ const postSchema = new mongoose.Schema(
   {
     content: {
       type: String,
-      required: true,
       trim: true,
+    },
+    title: {
+      type: String,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    imageUrl: {
+      type: String,
+      default: null,
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
