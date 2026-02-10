@@ -3,13 +3,13 @@ const Comment = require('../models/comment.model');
 // Ajouter un commentaire
 exports.createComment = async (req, res) => {
   try {
-    const { content, author, post } = req.body; // author au lieu de user
+    const { content, post } = req.body;
 
-    if (!content || !author || !post) {
-      return res.status(400).json({ message: 'Tous les champs sont requis.' });
+    if (!content || !post) {
+      return res.status(400).json({ message: 'Le contenu et le post sont requis.' });
     }
 
-    const comment = await Comment.create({ content, author, post });
+    const comment = await Comment.create({ content, author: req.user.id, post });
     res.status(201).json(comment);
   } catch (error) {
     console.error('Erreur serveur createComment:', error);
@@ -18,13 +18,44 @@ exports.createComment = async (req, res) => {
 };
 
 
-// Récupérer tous les commentaires
+// Récupérer tous les commentaires avec pagination
 exports.getComments = async (req, res) => {
   try {
-    const comments = await Comment.find()
-      .populate('user', 'name email') // affiche seulement le nom et l'email de l'utilisateur
-      .populate('post', 'title'); // selon ton modèle de post
-    res.status(200).json(comments);
+    // Récupérer et valider les paramètres de pagination
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 10;
+    if (limit > 50) limit = 50;
+
+    const skip = (page - 1) * limit;
+
+    // Récupérer les commentaires et le nombre total
+    const [comments, totalCount] = await Promise.all([
+      Comment.find()
+        .populate('author', 'username email')
+        .populate('post', 'title')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Comment.countDocuments()
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    res.status(200).json({
+      success: true,
+      data: comments,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la récupération des commentaires', error: error.message });
   }
@@ -34,7 +65,7 @@ exports.getComments = async (req, res) => {
 exports.getCommentById = async (req, res) => {
   try {
     const comment = await Comment.findById(req.params.id)
-      .populate('user', 'name email')
+      .populate('author', 'username email')
       .populate('post', 'title');
 
     if (!comment) return res.status(404).json({ message: 'Commentaire non trouvé' });

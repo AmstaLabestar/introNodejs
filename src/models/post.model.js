@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+// modèle post
 const postSchema = new mongoose.Schema(
   {
     content: {

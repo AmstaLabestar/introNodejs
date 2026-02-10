@@ -1,32 +1,6 @@
 const Post = require('../models/post.model');
 const Comment = require('../models/comment.model');
 
-// Créer un post
-// exports.createPost = async (req, res) => {
-//   try {
-//     const { content } = req.body;
-
-//     if (!content || content.trim() === '') {
-//       return res.status(400).json({ message: 'Le contenu du post est obligatoire' });
-//     }
-
-//     const newPost = await Post.create({
-//       content,
-//       user: req.user.id
-//     });
-
-//     await newPost.populate('user', 'username email');
-
-//     res.status(201).json({
-//       message: 'Post créé avec succès',
-//       post: newPost
-//     });
-//   } catch (error) {
-//     console.error('Erreur lors de la création du post:', error);
-//     res.status(500).json({ message: 'Erreur du serveur', error: error.message });
-//   }
-// };
-
 exports.createPost = async (req, res) => {
   try {
     const { content, title, description } = req.body;
@@ -60,18 +34,47 @@ exports.createPost = async (req, res) => {
 
 
 
-// Récupérer tous les posts
+// Récupérer tous les posts avec pagination
 exports.getPosts = async (req, res) => {
   try {
-    const posts = await Post.find()
-      .populate('user', 'username email')
-      .populate({
-        path: 'likes',
-        select: 'username'
-      })
-      .sort({ createdAt: -1 });
+    // Récupérer et valider les paramètres de pagination
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
 
-    res.status(200).json(posts);
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 10;
+    if (limit > 50) limit = 50;
+
+    const skip = (page - 1) * limit;
+
+    // Récupérer les posts et le nombre total
+    const [posts, totalCount] = await Promise.all([
+      Post.find()
+        .populate('user', 'username email')
+        .populate({
+          path: 'likes',
+          select: 'username'
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Post.countDocuments()
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    res.status(200).json({
+      success: true,
+      data: posts,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    });
   } catch (error) {
     console.error('Erreur lors de la récupération des posts:', error);
     res.status(500).json({ message: 'Erreur du serveur', error: error.message });
@@ -172,20 +175,46 @@ exports.toggleLike = async (req, res) => {
   }
 };
 
-// Récupérer les posts d'un utilisateur spécifique
+// Récupérer les posts d'un utilisateur spécifique avec pagination
 exports.getUserPosts = async (req, res) => {
   try {
-    const posts = await Post.find({ user: req.params.userId })
-      .populate('user', 'username email')
-      .populate({
-        path: 'likes',
-        select: 'username'
-      })
-      .sort({ createdAt: -1 });
+    // Récupérer et valider les paramètres de pagination
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 10;
+    if (limit > 50) limit = 50;
+
+    const skip = (page - 1) * limit;
+
+    // Récupérer les posts et le nombre total pour cet utilisateur
+    const [posts, totalCount] = await Promise.all([
+      Post.find({ user: req.params.userId })
+        .populate('user', 'username email')
+        .populate({
+          path: 'likes',
+          select: 'username'
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Post.countDocuments({ user: req.params.userId })
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
 
     res.status(200).json({
-      count: posts.length,
-      posts
+      success: true,
+      data: posts,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des posts utilisateur:', error);
@@ -194,22 +223,6 @@ exports.getUserPosts = async (req, res) => {
 };
 
 // Mettre à jour un post
-// exports.updatePost = async (req, res) => {
-//   try {
-//     const post = await Post.findById(req.params.id);
-//     if (!post) return res.status(404).json({ message: 'Post non trouvé' });
-//     if (post.user.toString() !== req.user.id)
-//       return res.status(403).json({ message: 'Accès refusé' });
-
-//     post.content = req.body.content || post.content;
-//     await post.save();
-
-//     res.status(200).json({ message: 'Post mis à jour', post });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Erreur serveur', error: error.message });
-//   }
-// };
-
 
 exports.updatePost = async (req, res) => {
   try {
