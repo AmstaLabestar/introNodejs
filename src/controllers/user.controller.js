@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
-// 🔹 Enregistrement d’un utilisateur
+//  Enregistrement d’un utilisateur
 exports.registerUser = async (req, res) => {
   try {
     const { username, email, password, confirmPassword } = req.body;
@@ -53,7 +53,7 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// 🔹 Connexion d’un utilisateur
+//  Connexion d’un utilisateur
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -94,10 +94,10 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// 🔹 Récupération de tous les utilisateurs (protégée)
+// Récupération de tous les utilisateurs (protégée)
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.find().select('-password');// on recupères les donnée de tous les users sans le password
     res.status(200).json(users);
   } catch (error) {
     console.error("Erreur lors de la récupération des utilisateurs :", error);
@@ -105,7 +105,7 @@ exports.getUsers = async (req, res) => {
   }
 };
 
-// 🔹 Récupération d’un utilisateur par ID (protégée)
+// Récupération d’un utilisateur par ID (protégée)
 exports.getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
@@ -119,9 +119,14 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// 🔹 Mise à jour d’un utilisateur (protégée)
+//  Mise à jour d'un utilisateur (protégée)
 exports.updateUser = async (req, res) => {
   try {
+    // Vérifier que l'utilisateur ne peut modifier que son propre profil
+    if (req.params.id !== req.user.id) {
+      return res.status(403).json({ message: 'Vous ne pouvez modifier que votre propre profil' });
+    }
+
     const { username, email } = req.body;
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
@@ -140,9 +145,14 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// 🔹 Suppression d’un utilisateur (protégée)
+// Suppression d'un utilisateur (protégée)
 exports.deleteUser = async (req, res) => {
   try {
+    // Vérifier que l'utilisateur ne peut supprimer que son propre compte
+    if (req.params.id !== req.user.id) {
+      return res.status(403).json({ message: 'Vous ne pouvez supprimer que votre propre compte' });
+    }
+
     const deletedUser = await User.findByIdAndDelete(req.params.id).select('-password');
     if (!deletedUser) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
@@ -150,6 +160,189 @@ exports.deleteUser = async (req, res) => {
     res.status(200).json({ message: 'Utilisateur supprimé', user: deletedUser });
   } catch (error) {
     console.error("Erreur lors de la suppression de l'utilisateur :", error);
+    res.status(500).json({ message: 'Erreur du serveur', error: error.message });
+  }
+};
+
+// Suivre un utilisateur
+exports.followUser = async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+    const currentUserId = req.user.id;
+
+    // Vérifier qu'on n'essaie pas de se suivre soi-même
+    if (targetUserId === currentUserId) {
+      return res.status(400).json({ message: 'Vous ne pouvez pas vous suivre vous-même' });
+    }
+
+    // Vérifier que l'utilisateur cible existe
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    const currentUser = await User.findById(currentUserId);
+
+    // Vérifier si on suit déjà cet utilisateur
+    if (currentUser.following.includes(targetUserId)) {
+      return res.status(409).json({ message: 'Vous suivez déjà cet utilisateur' });
+    }
+
+    // Ajouter à following et followers
+    currentUser.following.push(targetUserId);
+    targetUser.followers.push(currentUserId);
+
+    await currentUser.save();
+    await targetUser.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Vous suivez maintenant cet utilisateur',
+      following: true,
+      followingCount: currentUser.following.length,
+      followerCount: targetUser.followers.length
+    });
+  } catch (error) {
+    console.error('Erreur lors du suivi de l\'utilisateur:', error);
+    res.status(500).json({ message: 'Erreur du serveur', error: error.message });
+  }
+};
+
+// Arrêter de suivre un utilisateur
+exports.unfollowUser = async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+    const currentUserId = req.user.id;
+
+    // Vérifier que l'utilisateur cible existe
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    const currentUser = await User.findById(currentUserId);
+
+    // Vérifier si on suit cet utilisateur
+    if (!currentUser.following.includes(targetUserId)) {
+      return res.status(404).json({ message: 'Vous ne suivez pas cet utilisateur' });
+    }
+
+    // Retirer de following et followers
+    currentUser.following = currentUser.following.filter(id => id.toString() !== targetUserId);
+    targetUser.followers = targetUser.followers.filter(id => id.toString() !== currentUserId);
+
+    await currentUser.save();
+    await targetUser.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Vous avez arrêté de suivre cet utilisateur',
+      following: false,
+      followingCount: currentUser.following.length,
+      followerCount: targetUser.followers.length
+    });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du suivi:', error);
+    res.status(500).json({ message: 'Erreur du serveur', error: error.message });
+  }
+};
+
+// Récupérer les followers d'un utilisateur avec pagination
+exports.getFollowers = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Paramètres de pagination
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 10;
+    if (limit > 50) limit = 50;
+
+    const skip = (page - 1) * limit;
+
+    // Vérifier que l'utilisateur existe
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    // Récupérer les followers avec pagination
+    const [followers, totalCount] = await Promise.all([
+      User.find({ _id: { $in: user.followers } })
+        .select('-password')
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments({ _id: { $in: user.followers } })
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    res.status(200).json({
+      success: true,
+      data: followers,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des followers:', error);
+    res.status(500).json({ message: 'Erreur du serveur', error: error.message });
+  }
+};
+
+// Récupérer qui suit cet utilisateur (following) avec pagination
+exports.getFollowing = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Paramètres de pagination
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 10;
+    if (limit > 50) limit = 50;
+
+    const skip = (page - 1) * limit;
+
+    // Vérifier que l'utilisateur existe
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+
+    // Récupérer qui on suit avec pagination
+    const [following, totalCount] = await Promise.all([
+      User.find({ _id: { $in: user.following } })
+        .select('-password')
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments({ _id: { $in: user.following } })
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    res.status(200).json({
+      success: true,
+      data: following,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      }
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des utilisateurs suivis:', error);
     res.status(500).json({ message: 'Erreur du serveur', error: error.message });
   }
 };
